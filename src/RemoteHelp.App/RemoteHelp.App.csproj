@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    파일 위치: src/RemoteHelp.App/RemoteHelp.App.csproj
+    역할: 고객 런처(WPF) 프로젝트 정의. 원격제어 엔진을 직접 포함하므로 외부 실행 파일이 없다.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>RemoteHelp</AssemblyName>
+    <RootNamespace>RemoteHelp</RootNamespace>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <NeutralLanguage>ko-KR</NeutralLanguage>
+    <SatelliteResourceLanguages>ko-KR</SatelliteResourceLanguages>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PortalBaseUrl Condition="'$(PortalBaseUrl)' == ''">https://portal.example.com/</PortalBaseUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PortalBaseUrl</_Parameter1>
+      <_Parameter2>$(PortalBaseUrl)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      DXGI Desktop Duplication 용. 사용할 수 없는 환경에서는 GDI 로 자동 전환하므로
+      이 패키지가 없어도 기능은 동작하지만, 빌드에는 필요하다.
+    -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.6.2" />
+    <PackageReference Include="Vortice.DXGI" Version="3.6.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,73 @@
+# 파일 위치: .github/workflows/build-sign.yml
+# 역할: 런처를 GitHub-hosted runner 에서 빌드하고, SignPath Foundation 으로 서명한다.
+#       서명은 v* 태그를 푸시했을 때만 요청한다. (SignPath 승인 후 아래 <...> 값을 채운다)
+name: build-sign
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  PORTAL_BASE_URL: https://portal.example.com/   # 운영 포털 주소로 바꾼다
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish
+        shell: pwsh
+        run: ./scripts/build-exe.ps1 -PortalBaseUrl $env:PORTAL_BASE_URL -OutDir artifacts/unsigned
+
+      - name: Upload unsigned artifact
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: RemoteHelp-unsigned
+          path: artifacts/unsigned/RemoteHelp.exe
+
+    outputs:
+      artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+
+  sign:
+    # SignPath 승인 전에는 이 job 이 실패하므로 태그 푸시일 때만 실행한다.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit signing request to SignPath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: remote
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ needs.build.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts/signed
+
+      - name: Compute SHA-256
+        run: sha256sum artifacts/signed/RemoteHelp.exe | tee artifacts/signed/RemoteHelp.exe.sha256
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RemoteHelp-signed
+          path: artifacts/signed/*
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/signed/*
